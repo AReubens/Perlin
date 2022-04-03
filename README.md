@@ -4,11 +4,11 @@ type: project-readme
 # Perlin Noise 
 Creation of perlin noise
 
-## 3d Exmaple
-![2d gif example](3d_example.gif)
-
 ## Particles example
 ![Particles in a perlin field](Demo.gif)
+
+## Bare Perlin noise (2d with time coponent)
+![2d gif example](3d_example.gif)
 
 ## Files
 1. Perlin
@@ -23,7 +23,7 @@ Creation of perlin noise
 ## Improvments
 1. Short term
     1. Generalise Perlin Noise
-    2. Colours for particles
+    2. Colours for particles -  Done [[2022-04-03]]
     3. Generally more variance in the particles for pretty pictures
 2. Long term
     1. Simplex noise implementation
