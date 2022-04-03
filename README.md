@@ -7,6 +7,9 @@ Creation of perlin noise
 ## 3d Exmaple
 ![2d gif example](3d_example.gif)
 
+## Particles example
+![Particles in a perlin field](Demo.gif)
+
 ## Files
 1. Perlin
     A simple generator of perlin noise

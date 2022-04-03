@@ -20,9 +20,14 @@ import pyfastnoisesimd as fns
 # %%
 WIDTH = 2400
 HEIGHT = 1600
+SAVE_IMAGES = False
+
 # Generating noise takes a lot of memory, don't need it for every pixel
-NOISE_SCALE = 10
-NOISE_ZSCALE = 1
+# X & Y resolution of the perlin noise - lower values means computing a larger
+# perlin array and so much slower.
+NOISE_SCALE = 10  # X & Y resolution of the perlin noise
+NOISE_ZSCALE = 10  # Larger is slower transition over time
+NODES = 4  # Effectively the steepness of the noise
 
 if sys.platform == 'win32':
     # On Windows, the monitor scaling can be set to something besides normal 100%.
@@ -44,7 +49,7 @@ class Particle():
         self.au = 0
         self.av = 0
         self.mass = 1
-        self.max_speed = 20
+        self.max_speed = 100
         self.path = [[x], [y]]
         self.color = np.random.rand(3) * 255
         # self.color = (255, 255, 255, 200)
@@ -110,9 +115,9 @@ def draw(screen, particles, count):
     for p in particles:
         pygame.draw.circle(
             screen, 
-            (0, 0, 0), 
+            p.color, 
             (p.x, p.y), 
-            1
+            2
         )
     pygame.display.flip()
  
@@ -121,11 +126,11 @@ def runPyGame():
     pygame.init()
 
     fps = 45.0
-    duration = 10
+    duration = 30
     width, height = WIDTH, HEIGHT
-    field_strength = 20
-    num_particles = 1000
-    tail_length = 2000
+    field_strength = 100
+    num_particles = 2000
+    tail_length = 100
     # tail length is measured in frames (so correlates to max speed at
     # the moment)
 
@@ -143,17 +148,10 @@ def runPyGame():
 
     # Set up the perlin noise field:
     print("Generating Perlin...")
-    # pyfastnoisesimd is just so much faster this is not worth it:
-    # Also, with high values for the shape, this crashes, unsure why
-    # limx = np.linspace(0, 4, width, dtype=np.float16)
-    # limy = np.linspace(0, 4, height, dtype=np.float16)
-    # limz = np.linspace(0, 2, int(fps*duration), dtype=np.float16)
-    # x, y, z = np.meshgrid(limx, limy, limz)
-    # vecs = gen_perlin(x, y, z) * 2 * np.pi
-    
+
     # pyfastnoisesimd use:
     perlin = fns.Noise(numWorkers=10)
-    perlin.frequency = 5 / width * NOISE_SCALE
+    perlin.frequency = NODES / width * NOISE_SCALE
     perlin.noiseType = fns.NoiseType.Perlin
     perlin.fractal.octaves = 1
     perlin.fractal.lacunarity = 2.1
@@ -162,9 +160,7 @@ def runPyGame():
     vecs = perlin.genAsGrid([
         width // NOISE_SCALE,
         height // NOISE_SCALE,
-        # int(fps*duration // NOISE_ZSCALE)
-
-        10000
+        int(fps*duration // NOISE_ZSCALE)
     ])
     vecs = vecs * 2 * np.pi * 2  # Extra times 2 helps to randomise the vectors
     
@@ -177,10 +173,17 @@ def runPyGame():
     # Main game loop.
     dt = 1/fps
     count = 0
-    remainder_tail = 0
+    increasing = True
     tot = 0
     while True:
         update(dt, particles, vecs_x, vecs_y, count)
+
+        if False:  # Show the underlying Perlin noise
+            z = int(count // NOISE_ZSCALE)
+            surf = pygame.surfarray.make_surface(vecs[:, :, z])
+            surf = pygame.transform.scale(surf, np.array(vecs.shape[:2])
+                * NOISE_SCALE)
+            screen.blit(surf, (0, 0))
         draw(screen, particles, count)
         tot += 255
         if tot // tail_length > 1:
@@ -195,11 +198,31 @@ def runPyGame():
             screen.blit(surface, (0,0))
         
         dt = fpsClock.tick(fps)
-        count += 1
 
-        # Lazy way to stop crashing at the end of the perlin
-        # generation limits
-        if count == vecs_x.shape[2]:
-            count = 0
+        # For saving the image files for later complation as video:
+        if SAVE_IMAGES:
+            file_name = f"tmp/{count:04d}.png"
+            pygame.image.save(screen, file_name)
+
+        # Forward and rewind over the noise for a smooth transition at end
+        if increasing: 
+            if count == vecs.shape[2] * NOISE_ZSCALE - 1:
+                increasing = False
+                # While the sim will still be unique after here, since the
+                # starting points of the particles is unique, this reaches the
+                # end of the set duration, so stop saving the images to file
+                if SAVE_IMAGES:
+                    break  
+                count -= 1
+            else:
+                count += 1
+        else: 
+            if count == 0:
+                increasing = True
+                count += 1 
+            else:
+                count -= 1
 
 runPyGame()
+
+print('Complete')  # Only here if we're saving images
