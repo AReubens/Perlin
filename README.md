@@ -2,13 +2,10 @@
 type: project-readme
 ---
 # Perlin Noise 
-Creation of perlin noise
+Creation of perlin noise & use in a particle system.
 
 ## Particles example
 ![Particles in a perlin field](Demo.gif)
-
-## Bare Perlin noise (2d with time coponent)
-![2d gif example](3d_example.gif)
 
 ## Files
 1. Perlin
